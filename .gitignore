@@ -1,8 +1,9 @@
 __pycache__/
 .vscode/
 .venv/
-manufacturers/__pycache__/user_device.cpython-38.pyc
-manufacturers/ASUS/__pycache__/ASUS.cpython-38.pyc
-manufacturers/ASUS/ROG.py
-manufacturers/ASUS/TUF.py
+server/manufacturers/__pycache__/user_device.cpython-38.pyc
+server/manufacturers/ASUS/__pycache__/ASUS.cpython-38.pyc
+server/manufacturers/ASUS/ROG.py
+server/manufacturers/ASUS/TUF.py
 bash.exe.stackdump
+api-result.json

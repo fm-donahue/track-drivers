@@ -12,6 +12,6 @@ This script requires few library dependencies.
 - [WMI](https://pypi.org/project/WMI/)
 - [Beautiful Soup 4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
 - [Win10toast_click](https://pypi.org/project/win10toast-click/)
-
+ 
 ## License
 [MIT](https://github.com/fm-donahue/track-drivers/blob/main/LICENSE)

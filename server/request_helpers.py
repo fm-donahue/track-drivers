@@ -1,12 +1,13 @@
-import random
 import functools
+import random
 import time
+
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
 
-class ResponseFail(Exception):
-    pass
+from errors import ServerRequestsError
+
 
 def random_user_agent():
     user_agent = [
@@ -38,19 +39,21 @@ https://findwork.dev/blog/advanced-usage-python-requests-timeouts-retries-hooks/
 def event_handling(s, *args, **kwargs):
     try:
         s.raise_for_status()
+
     except requests.exceptions.ConnectionError as e:
-        raise e(f'Connection Error. Make sure you are connected to the Internet.\n\
-                Status: {s.status_code}')
+        raise ServerRequestsError('Connection Error', e.response) from e
+
     except requests.exceptions.HTTPError as e:
-        raise e(f'Http Error. Details given below.\n\
-                Status: {s.status_code}\n\
-                Url: {s.url}\n\
-                Headers: {s.headers}')
+        raise ServerRequestsError('Http Error. Details given below', e.response) from e
+
+    except requests.exceptions.Timeout as e:
+        raise ServerRequestsError('Retry limit reached', e.response) from e
+
+    except requests.exceptions.TooManyRedirects as e:
+        raise ServerRequestsError('Bad url. Check and update url', e.response) from e
+
     except requests.exceptions.RequestException as e:
-        raise e(f'Something else happened.\n\
-                Status: {s.status_code}\n\
-                Url: {s.url}\n\
-                Headers: {s.headers}')
+        raise ServerRequestsError('Something else happened.', e.response) from e
 
 class TimeoutHTTPAdapter(HTTPAdapter):
     def __init__(self, *args, **kwargs):

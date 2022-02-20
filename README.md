@@ -13,22 +13,5 @@ This script requires few library dependencies.
 - [Beautiful Soup 4](https://www.crummy.com/software/BeautifulSoup/bs4/doc/)
 - [Win10toast_click](https://pypi.org/project/win10toast-click/)
 
-## Installation
-1. Clone the repository
-```
-git clone https://github.com/fm-donahue/track-drivers.git
-cd track-drivers
-```
-
-2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-3. Then run script using:
-```bash
-python run.py
-```
-
 ## License
 [MIT](https://github.com/fm-donahue/track-drivers/blob/main/LICENSE)

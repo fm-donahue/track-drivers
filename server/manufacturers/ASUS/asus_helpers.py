@@ -1,6 +1,6 @@
 from .ASUS import ASUS, RequestDrivers
 from .Prime import Prime, PrimeUrlParameters
-from request_helpers import open_session
+
 
 def identify_series(model, os_info):
         if 'prime' in model.lower():
@@ -11,9 +11,9 @@ def identify_series(model, os_info):
 class GetASUSDrivers:
     """This class runs all other ASUS class needed to get the drivers from their website"""
 
-    def __init__(self, model, os_info):
+    def __init__(self, model, os_info, session):
         self.series, self.url_params = identify_series(model, os_info)
-        self.session = open_session()
+        self.session = session
         
     def run_drivers(self):
         self.session.headers.update(self.series.headers)

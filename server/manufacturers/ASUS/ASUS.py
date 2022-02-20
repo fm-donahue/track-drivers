@@ -1,10 +1,10 @@
 import re
-import sys
 from datetime import datetime
 
-from manufacturers.manufacturer import ManufacturerInfo
 from bs4 import BeautifulSoup
-from request_helpers import random_user_agent, sleep_after_request, ResponseFail
+from errors import ParseAttributeError, ResponseFail, UrlRedirected
+from manufacturers.manufacturer import ManufacturerInfo
+from request_helpers import random_user_agent, sleep_after_request
 
 
 def headers():
@@ -15,7 +15,7 @@ def headers():
 def params(model):
         return {
             'model': model.replace(' ', '-'),
-            'cpu': '',
+            'cpu': ''
         }
 
 class VerifyProductUrl:
@@ -26,18 +26,21 @@ class VerifyProductUrl:
         self.session = session
 
     def test_url(self):
-        url = self.series.host + self.series.url
-        if self.url_status(url) == False:
-            url = self.series.host + f'/supportonly/{self.series.model}/helpdesk_download' # Url of old asus board products
+        url = self.series.url
+        if self.url_status(url) == True:
+            return True
+        else:
+            url = f'/supportonly/{self.series.model}/helpdesk_download' # Url of old asus board products
             if self.url_status(url) == True:
                 return url
+            return
 
     @sleep_after_request(5, 10)
     def url_status(self, url):
-        r = self.session.get(url, allow_redirects=False)
+        r = self.session.get(self.series.host + url, allow_redirects=False)
         if r.status_code == 200:
             return True
-        return False
+        return
 
 class RequestProductInfoByHTML:
     """Requests product details by using html data needed for parameters in requesting drivers"""
@@ -56,8 +59,9 @@ class RequestProductInfoByHTML:
         soup = BeautifulSoup(self.url_response.content, 'lxml')
         try:
             script = soup.find('script', text=re.compile(r'ProductHashedID:(.*?),'))
-        except AttributeError as e:
-            sys.exit('ProductHashedID not found on the page.' + e)
+        except AttributeError:
+            raise ParseAttributeError(f'{{"Message": "pdhashedid not found", \
+                "Url": "{self.url_response.url}" }}')
 
         re_group = re.search(r'ProductHashedID:"(.*?)"', script.string)
         _, value = re_group.group(0).split(':')
@@ -68,8 +72,9 @@ class RequestProductInfoByHTML:
         soup = BeautifulSoup(self.url_response.content, 'lxml')
         try:
             script = soup.find('script', text=re.compile(r'"sku": [0-9]+'))
-        except AttributeError as e:
-            sys.exit('ProductID not found on the page.' + e)
+        except AttributeError:
+            raise ParseAttributeError(f'{{"Message": "pdid not found", \
+                "Url": "{self.url_response.url}" }}')
 
         re_group = re.search(r'"sku": [0-9]+', script.string)
         _, value = re_group.group(0).split(':')
@@ -113,10 +118,13 @@ class RequestUrlParameters:
     def verify_url(self):
         verify = VerifyProductUrl(self.series, self.session)
         url = verify.test_url()
-        if url:
-            self.series.set_url = url
-        return
+        if url == True:
+            return
+        elif url == None:
+            raise UrlRedirected(f'Url redirects to home Asus home page. Url: {url}')
 
+        self.series.set_url = url
+        
     def set_session(self, session):
         self.session = session
 
@@ -140,7 +148,8 @@ class RequestDrivers:
         results = self.session.get(self.series.host + self.series.api_url + '/GetPDDrivers', headers=self.headers, params=self.params)
         results_json = results.json()
         if results_json['Status'] == 'FAIL':
-            raise ResponseFail('Response does not contain any drivers. {}'.format(results.url))
+            raise ResponseFail(f'{{"Message": "Response of api url does not contain any drivers", \
+                                   "Url": "{results.url}" }}')
         drivers = results_json['Result']['Obj']
         for driver in drivers:
             driver_lower = driver['Name'].lower()
@@ -155,7 +164,8 @@ class RequestDrivers:
         results = self.session.get(self.series.host + self.series.api_url + '/GetPDBIOS', headers=self.headers, params=self.params)
         results_json = results.json()
         if results_json['Result'] == None:
-            raise ResponseFail('Url response does not contain any bios drivers. {}'.format(results.url))
+            raise ResponseFail(f'{{"Message": "Response of api url does not contain bios drivers", \
+                                   "Url": "{results.url}" }}')
         bios_files = results_json['Result']['Obj'][0]['Files']
         for file in bios_files:
             if file['IsRelease'] == '1':

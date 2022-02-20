@@ -1,10 +1,12 @@
 import os
 import re
 import time
+from collections import deque
 
+import requests
 from win10toast_click import ToastNotifier
 
-from helper import manufacturer_class
+from helpers import get_request_drivers
 from user_device import (BaseBoard, BoardLAN, OperatingSystemInfo,
                          find_driver_class)
 
@@ -58,13 +60,11 @@ class Notification:
     Downloads the drivers by clicking the banner.
     """
 
-    def __init__(self, toast, session):
+    def __init__(self, toast):
         self.toaster = toast
-        self.session = session
-        self.queue = []
+        self.queue = deque()
 
     def notify_user(self):
-        self.session.params.clear()
         if not self.queue:
             self.toaster.show_toast(
                 "This program determined that the best drivers",
@@ -73,7 +73,7 @@ class Notification:
                 )
             return
         while self.queue:
-            dequeue = self.queue.pop(0)
+            dequeue = self.queue.popleft()
             self.toaster.show_toast(
                 f"{dequeue['Title']} {dequeue['Version']}",
                 "Click to download the latest driver.",
@@ -86,7 +86,7 @@ class Notification:
             time.sleep(0.1)
 
     def download_driver(self, data):
-        dl_request = self.session.get(data['DownloadURL'], stream=True)
+        dl_request = requests.get(data['DownloadURL'], stream=True)
         filename = f"{data['Title']} {data['Version']}"
         file = os.path.join(SAVE_PATH, filename + '.zip')
         with open(file, 'wb') as f:
@@ -103,10 +103,9 @@ class Application:
         board = BaseBoard()
         board.info()
         operating_system = OperatingSystemInfo()
-        driver_class = manufacturer_class(board.manufacturer(), board.model(), operating_system.user_os())
-        request_drivers = driver_class.run_drivers()
-        web_drivers = request_drivers.get_drivers()
-        notify = Notification(toast, driver_class.get_session())
+        web_drivers = get_request_drivers(board.manufacturer(), board.model(), operating_system.user_os())
+        notify = Notification(toast)
+
         for driver, value in web_drivers.items():
             newer_driver = None
             user_driver = find_driver_class(driver)
@@ -119,6 +118,5 @@ class Application:
                     newer_driver = compare.compare_lan_drivers(user_driver, value)
                     for driver in newer_driver:
                         notify.append_queue(driver)
-        notify.notify_user()
-        notify.session.close()
 
+        notify.notify_user() 
